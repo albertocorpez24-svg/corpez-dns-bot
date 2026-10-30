@@ -4,7 +4,6 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 import telebot
 import requests
 
-# Kinukuha ang mga keys at sinisigurong walang space sa dulo
 BOT_TOKEN = os.environ.get('BOT_TOKEN', '').strip()
 NEXTDNS_API_KEY = os.environ.get('NEXTDNS_API_KEY', '').strip()
 
@@ -15,13 +14,16 @@ if not BOT_TOKEN or not NEXTDNS_API_KEY:
 bot = telebot.TeleBot(BOT_TOKEN)
 bot.delete_webhook()
 
-# --- CLEAN HEADERS (Walang Origin para hindi mag-authRequired) ---
-HEADERS = {
+# --- ITO ANG SOLUSYON: Gagamit tayo ng Session at aalisin ang Origin header ---
+session = requests.Session()
+session.headers.update({
     "X-Api-Key": NEXTDNS_API_KEY,
     "Accept": "application/json",
     "Content-Type": "application/json"
-}
-# ----------------------------------------------------------------
+})
+# Siguradong walang "Origin" na nakadikit
+session.headers.pop("Origin", None)
+# --------------------------------------------------------------------------
 
 def run_dummy_server():
     port = int(os.environ.get("PORT", 8080))
@@ -37,32 +39,25 @@ def send_welcome(message):
 @bot.message_handler(commands=['getdns'])
 def give_dns(message):
     user_id = message.from_user.id
-    
-    bot.reply_to(message, "Wait lang boss, ginagawa ko pa yung VIP DNS mo. Mag-hintay ka ng mga 5-10 seconds...")
+    bot.reply_to(message, "Wait lang boss, ginagawa ko pa yung VIP DNS mo...")
 
     profile_name = f"MLBB-VIP-{user_id}"
     
     try:
-        # 1. Gumawa ng profile
-        res = requests.post("https://api.nextdns.io/profiles", headers=HEADERS, json={"name": profile_name})
+        # Gumamit ng session.post para sa lahat ng request
+        res = session.post("https://api.nextdns.io/profiles", json={"name": profile_name})
         
         if res.status_code != 200:
-            # Mag-print sa Render logs kung may error para makita natin
-            print(f"NEXTDNS ERROR: {res.status_code} - {res.text}")
             bot.reply_to(message, f"Error boss: {res.text}")
             return
         
         profile_id = res.json()['data']['id']
         
-        # 2. I-block ang telemetry
         domains = ["appsflyer.com", "umeng.com", "gcloud.tencent.com"]
         for domain in domains:
-            requests.post(f"https://api.nextdns.io/profiles/{profile_id}/denylist", 
-                          headers=HEADERS, json={"id": domain, "active": True})
+            session.post(f"https://api.nextdns.io/profiles/{profile_id}/denylist", json={"id": domain, "active": True})
         
-        # 3. Patayin ang Block Page
-        requests.patch(f"https://api.nextdns.io/profiles/{profile_id}/settings", 
-                       headers=HEADERS, json={"blockPage": {"enabled": False}})
+        session.patch(f"https://api.nextdns.io/profiles/{profile_id}/settings", json={"blockPage": {"enabled": False}})
         
         dns_string = f"{profile_id}.dns.nextdns.io"
         
@@ -78,7 +73,6 @@ def give_dns(message):
         bot.reply_to(message, msg, parse_mode='Markdown')
         
     except Exception as e:
-        print(f"BOT ERROR: {str(e)}")
         bot.reply_to(message, f"May error na nangyari boss. Try again later.")
 
 print("Bot is running...")
