@@ -12,24 +12,19 @@ if not BOT_TOKEN or not NEXTDNS_API_KEY:
     exit()
 
 bot = telebot.TeleBot(BOT_TOKEN)
-
-# --- ITO ANG BAGONG LINYA PARA MA-FIX ANG 409 ERROR ---
 bot.delete_webhook()
-# ------------------------------------------------------
 
 HEADERS = {
     "X-Api-Key": NEXTDNS_API_KEY,
     "Content-Type": "application/json"
 }
 
-# --- DUMMY WEB SERVER PARA SA RENDER ---
 def run_dummy_server():
     port = int(os.environ.get("PORT", 8080))
     server = HTTPServer(('0.0.0.0', port), BaseHTTPRequestHandler)
     server.serve_forever()
 
 threading.Thread(target=run_dummy_server, daemon=True).start()
-# ---------------------------------------
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
