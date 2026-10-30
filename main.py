@@ -11,11 +11,16 @@ if not BOT_TOKEN or not NEXTDNS_API_KEY:
     print("Error: Missing BOT_TOKEN or NEXTDNS_API_KEY environment variables.")
     exit()
 
+# --- ITO ANG MAG-AYOS NG AUTHREQUIRED (Inaalis ang anumang space) ---
+CLEAN_API_KEY = NEXTDNS_API_KEY.strip()
+# -------------------------------------------------------------------
+
 bot = telebot.TeleBot(BOT_TOKEN)
 bot.delete_webhook()
 
 HEADERS = {
-    "X-Api-Key": NEXTDNS_API_KEY,
+    "X-Api-Key": CLEAN_API_KEY,
+    "Accept": "application/json",
     "Content-Type": "application/json"
 }
 
