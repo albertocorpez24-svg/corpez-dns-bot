@@ -1,4 +1,6 @@
 import os
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 import telebot
 import requests
 
@@ -14,6 +16,15 @@ HEADERS = {
     "X-Api-Key": NEXTDNS_API_KEY,
     "Content-Type": "application/json"
 }
+
+# --- DUMMY WEB SERVER PARA SA RENDER ---
+def run_dummy_server():
+    port = int(os.environ.get("PORT", 8080))
+    server = HTTPServer(('0.0.0.0', port), BaseHTTPRequestHandler)
+    server.serve_forever()
+
+threading.Thread(target=run_dummy_server, daemon=True).start()
+# ---------------------------------------
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
